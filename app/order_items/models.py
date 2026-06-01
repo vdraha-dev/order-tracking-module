@@ -16,11 +16,11 @@ from app.db.base import Base
 
 
 class OrderItem(Base):
-    __tablename__ = "oredr_item"
+    __tablename__ = "order_item"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     order_id: Mapped[int] = mapped_column(ForeignKey("order.id"), nullable=False)
-    product_id: Mapped[int] = mapped_column(ForeignKey("order.id"), nullable=False)
+    product_id: Mapped[int] = mapped_column(ForeignKey("product.id"), nullable=False)
     quantity: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     price_at_purchase: Mapped[Decimal] = mapped_column(Numeric(10, 2), nullable=False)
 

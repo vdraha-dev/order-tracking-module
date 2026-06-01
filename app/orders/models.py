@@ -33,7 +33,7 @@ class Order(Base):
 
     # relationships
 
-    user: Mapped[User] = relationship(back_populates="user")
+    user: Mapped[User] = relationship(back_populates="orders")
 
     items: Mapped[list[OrderItem]] = relationship(
         back_populates="order", cascade="all, delete-orphan"
