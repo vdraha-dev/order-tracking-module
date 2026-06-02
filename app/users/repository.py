@@ -1,5 +1,3 @@
-from typing import Any
-
 from fastapi import Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,36 +15,29 @@ class UserRepository:
         res = await self.session.execute(stmt)
         return res.scalar_one_or_none()
 
-    async def get_user_by_email(self, user_email: str) -> User | None:
-        stmt = select(User).where(User.email == user_email)
+    async def get_user_by_username(self, username: str) -> User | None:
+        stmt = select(User).where(User.username == username)
         res = await self.session.execute(stmt)
         return res.scalar_one_or_none()
 
-    async def user_with_this_email_exists(self, user_email: str) -> bool:
-        user = await self.get_user_by_email(user_email)
+    async def user_with_this_id_exists(self, user_id: int) -> bool:
+        user = await self.get_user_by_id(user_id)
 
         if user:
             return True
 
         return False
 
-    def add_object(self, obj: Any):
-        self.session.add(obj)
+    async def user_with_this_username_exists(self, username: str) -> bool:
+        user = await self.get_user_by_username(username)
 
-    async def flush(self):
-        await self.session.flush()
+        if user:
+            return True
 
-    async def refresh_object(self, obj):
-        await self.session.refresh(obj)
+        return False
 
-    async def commit(self):
-        await self.session.commit()
-
-    # async def add_access_token(self, token: AccessToken):
-    #     self.session.add(token)
-
-    # async def add_user(self, user: User):
-    #     self.session.add(user)
+    def add_user(self, user: User):
+        self.session.add(user)
 
 
 async def get_user_repository(session=Depends(get_session)) -> UserRepository:
