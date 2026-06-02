@@ -13,8 +13,21 @@ class OrderService:
         self.uow = uow
 
     async def create_order(
-        self, user_id: int, items: list[ItemsRequest]
+        self, user_id: int, items: list[ItemsRequest], need_user_checking: bool = False
     ) -> OrderResponse:
+
+        if not len(items):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The `items` list cannot be empty",
+            )
+
+        if any([item.quantity == 0 for item in items]):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The quantity of items must be greater than 0",
+            )
+
         grouped = defaultdict(int)
 
         # onli unique items
@@ -22,6 +35,14 @@ class OrderService:
             grouped[item.product_id] += item.quantity
 
         async with self.uow:
+            if need_user_checking:
+                exists = await self.uow.user.user_with_this_id_exists(user_id)
+                if not exists:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail=f"User {user_id} not found",
+                    )
+
             order = self.uow.orders.create_new_order(user_id)
 
             products = await self.uow.products.get_products(list(grouped.keys()))
