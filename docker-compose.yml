@@ -1,0 +1,16 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_URL=sqlite+aiosqlite:///./db.sqlite
+      - DB_ASYNC_URL=sqlite+aiosqlite:///./db.sqlite
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+
+
+
