@@ -5,6 +5,7 @@ from fastapi import Depends, HTTPException, status
 from passlib.context import CryptContext
 
 from app.core.config import config
+from app.uow import UnitOfWork, get_uow
 from app.users.api.v1.schemas import (
     UserCreate,
     UserCreateResponse,
@@ -12,65 +13,68 @@ from app.users.api.v1.schemas import (
     UserLoginResponse,
 )
 from app.users.models import AccessToken, User
-from app.users.repository import UserRepository, get_user_repository
 
 hash_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 
 class UserService:
-    def __init__(self, user_repository: UserRepository):
-        self.user_repository = user_repository
+    def __init__(self, uow: UnitOfWork):
+        self.uow = uow
 
     async def create_user(self, user: UserCreate) -> UserCreateResponse:
 
-        user_exists = await self.user_repository.user_with_this_email_exists(user.email)
-        if user_exists:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="User with this email already exists",
-            )
+        async with self.uow:
+            user_exists = await self.uow.user.user_with_this_email_exists(user.email)
+            if user_exists:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="User with this email already exists",
+                )
 
-        user_data = user.model_dump()
-        user_data["password"] = self.hash_password(user_data["password"])
+            user_data = user.model_dump()
+            user_data["password"] = self.hash_password(user_data["password"])
 
-        db_user = User(**user_data)
-        self.user_repository.add_object(db_user)
-        await self.user_repository.flush()
-        await self.user_repository.refresh_object(db_user)
+            db_user = User(**user_data)
+            self.uow.user.add_object(db_user)
 
-        token, expire = self.generate_access_token(db_user)
+            token, expire = self.generate_access_token(db_user)
 
-        access_token = AccessToken(user_id=db_user.id, token=token, expires_at=expire)
-        self.user_repository.add_object(access_token)
+            access_token = AccessToken(user=db_user, token=token, expires_at=expire)
+            self.uow.user.add_object(access_token)
 
-        await self.user_repository.commit()
+            await self.uow.flush()
 
-        return UserCreateResponse(
-            id=db_user.id,
-            username=db_user.username,
-            email=db_user.email,
-            access_token=token,
-            expiry=expire,
-        )
+            data = {
+                "id": db_user.id,
+                "username": db_user.username,
+                "email": db_user.email,
+                "access_token": token,
+                "expiry": expire,
+            }
+
+        return UserCreateResponse(**data)
 
     async def handle_login(self, user: UserLogin):
-        db_user = await self.user_repository.get_user_by_email(user.email)
+        async with self.uow:
+            db_user = await self.uow.user.get_user_by_email(user.email)
 
-        if not db_user or not hash_context.verify(user.password, db_user.password):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid credentials",
-                headers={"WWW-Authenticate": "Bearer"},
+            if not db_user or not hash_context.verify(user.password, db_user.password):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid credentials",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
+            token, expiry = self.generate_access_token(db_user)
+
+            access_token = AccessToken(
+                user_id=db_user.id, token=token, expires_at=expiry
             )
+            self.uow.user.add_object(access_token)
 
-        token, expiry = self.generate_access_token(db_user)
+            data = {"access_token": token, "expiry": expiry}
 
-        access_token = AccessToken(user_id=db_user.id, token=token, expires_at=expiry)
-        self.user_repository.add_object(access_token)
-
-        await self.user_repository.commit()
-
-        return UserLoginResponse(access_token=token, expiry=expiry)
+        return UserLoginResponse(**data)
 
     def hash_password(self, password: str) -> str:
         return hash_context.hash(password)
@@ -94,5 +98,5 @@ class UserService:
         return token, expire
 
 
-async def get_user_service(user_repository=Depends(get_user_repository)) -> UserService:
-    return UserService(user_repository=user_repository)
+async def get_user_service(uow=Depends(get_uow)) -> UserService:
+    return UserService(uow=uow)
