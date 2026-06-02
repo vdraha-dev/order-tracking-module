@@ -3,7 +3,6 @@
 
 # Запуск проекта
 
-Перейменувати .env.example в .env
 
 ## Локально
 
@@ -12,6 +11,10 @@ pip install uv
 uv sync
 source .venv/bin/activate # Linux / macOS
 .venv\Scripts\Activate.ps1 # Windows (PowerShell)
+mkdir data
+cp .env.example .env # Linux / macOS
+Copy-Item .env.example .env # Windows (PowerShell)
+alembic upgrade head
 uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 ## Docker

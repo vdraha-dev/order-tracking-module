@@ -6,11 +6,10 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DB_URL=sqlite+aiosqlite:///./db.sqlite
-      - DB_ASYNC_URL=sqlite+aiosqlite:///./db.sqlite
+      - DB_URL=sqlite:////app/data/database.db
+      - DB_ASYNC_URL=sqlite+aiosqlite:////app/data/database.db
     volumes:
       - ./data:/app/data
-    restart: unless-stopped
 
 
 
