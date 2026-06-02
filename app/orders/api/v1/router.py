@@ -32,6 +32,12 @@ async def create_order(
 
 
 @order.get(
-    "/user/{user_id}", response_model=OrderResponse, status_code=status.HTTP_200_OK
+    "/user/{user_id}",
+    response_model=list[OrderResponse],
+    status_code=status.HTTP_200_OK,
 )
-async def get_orders_by_user_id(): ...
+async def get_orders_by_user_id(
+    user_id: int, service: OrderService = Depends(get_order_service)
+):
+    data = await service.get_orders_by_user_id(user_id)
+    return data

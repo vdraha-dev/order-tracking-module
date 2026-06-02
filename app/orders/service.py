@@ -83,7 +83,6 @@ class OrderService:
 
             total = sum(item.price_at_purchase * item.quantity for item in order_items)
 
-            # TODO
             response = OrderResponse(
                 id=order.id,
                 total=Decimal(total),
@@ -94,6 +93,28 @@ class OrderService:
                     for item in order_items
                 ],
             )
+
+        return response
+
+    async def get_orders_by_user_id(self, user_id: int) -> list[OrderResponse]:
+        async with self.uow:
+            orders = await self.uow.orders.get_orders_by_user_id(user_id)
+
+            response = [
+                OrderResponse(
+                    id=order.id,
+                    total=order.total,
+                    items=[
+                        ItemsResponse(
+                            id=item.id,
+                            price=item.price_at_purchase,
+                            quantity=item.quantity,
+                        )
+                        for item in order.items
+                    ],
+                )
+                for order in orders
+            ]
 
         return response
 
