@@ -31,26 +31,14 @@ class ProductRepository:
 
         return product
 
-    async def get_all_products(self) -> Sequence[Product]:
-        stmt = select(Product)
+    async def get_products(self, ids: list[int] | None = None) -> Sequence[Product]:
+        if not ids:
+            stmt = select(Product)
+        else:
+            stmt = select(Product).where(Product.id.in_(ids))
         res = await self.session.execute(stmt)
 
         return res.scalars().all()
-
-    async def get_product_by_id(self, product_id: int) -> Product: ...
-
-    async def update_product_price(self, product_id: int, price: Decimal): ...
-
-    async def update_product_stock(self, product_id: int, stock: int): ...
-
-    async def commit(self):
-        await self.session.commit()
-
-    async def flush(self):
-        await self.session.flush()
-
-    async def refresh_product(self, product: Product):
-        await self.session.refresh(product)
 
 
 async def get_product_repository(session=Depends(get_session)) -> ProductRepository:
