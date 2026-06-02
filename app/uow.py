@@ -35,5 +35,5 @@ class UnitOfWork:
             await self.session.commit()
 
 
-async def get_uof(session=Depends(get_session)) -> UnitOfWork:
+async def get_uow(session=Depends(get_session)) -> UnitOfWork:
     return UnitOfWork(session)

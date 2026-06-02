@@ -5,7 +5,7 @@ from fastapi import Depends, HTTPException, status
 
 from app.order_items.models import OrderItem
 from app.orders.api.v1.schemas import ItemsRequest, ItemsResponse, OrderResponse
-from app.uow import UnitOfWork, get_uof
+from app.uow import UnitOfWork, get_uow
 
 
 class OrderService:
@@ -77,5 +77,5 @@ class OrderService:
         return response
 
 
-async def get_order_service(uow=Depends(get_uof)) -> OrderService:
+async def get_order_service(uow=Depends(get_uow)) -> OrderService:
     return OrderService(uow)
